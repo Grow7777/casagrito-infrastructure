@@ -1,0 +1,36 @@
+name: CI/CD Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy to Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Executing remote ssh commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }} # Recomendado: Cambiar password por SSH Key
+          script: |
+            cd /var/www/teatro-app/PROYECTO_NESTS_TEATRO
+            
+            # Update source code
+            git pull origin main
+            
+            # Rebuild services (Forcing no-cache for frontend to ensure consistency)
+            docker compose build --no-cache frontend
+            docker compose build backend
+            
+            # Deploy containers and clean up orphans
+            docker compose up -d --remove-orphans
+            
+            # Resource Management: Remove unused images and build cache
+            docker system prune -f
+            
+            echo "🚀 Deployment completed successfully!"

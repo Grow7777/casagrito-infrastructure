@@ -1,0 +1,73 @@
+services:
+  # 1. DATABASE (Isolated in backend-network)
+  db:
+    image: postgres:15-alpine
+    container_name: casagrito_db
+    restart: always
+    env_file: .env.backend
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # 2. BACKEND (Bridge between both networks)
+  backend:
+    build: ./backend-teatro
+    container_name: casagrito_backend
+    restart: always
+    depends_on:
+      - db
+    env_file: .env.backend
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+    networks:
+      - backend-network
+      - frontend-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # 3. FRONTEND
+  frontend:
+    build: 
+      context: ./frontend-teatro
+      args:
+        NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: casagrito_frontend
+    restart: always
+    depends_on:
+      - backend
+    env_file: .env.frontend
+    networks:
+      - frontend-network
+
+  # 4. NGINX PROXY (Only exposed service)
+  proxy:
+    image: nginx:alpine
+    container_name: casagrito_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - frontend-network
+
+volumes:
+  postgres_data:
+
+networks:
+  frontend-network: # Network for Web traffic
+  backend-network:  # Private network for Data (Database isolation)
