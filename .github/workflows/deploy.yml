@@ -16,7 +16,7 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }} # Recomendado: Cambiar password por SSH Key
+          key: ${{ secrets.VPS_SSH_KEY }} 
           script: |
             cd /var/www/teatro-app/PROYECTO_NESTS_TEATRO
             
